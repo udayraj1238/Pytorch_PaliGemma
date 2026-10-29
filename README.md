@@ -163,23 +163,29 @@ Pytorch_PaliGemma/
 ```bash
 git clone https://github.com/udayraj1238/Pytorch_PaliGemma.git
 cd Pytorch_PaliGemma
-pip install torch torchvision pillow
+pip install -r requirements.txt
+python -m pytest -q   # shape checks + KV-cache decoding matches a full forward pass
 ```
 
 ```python
-from modeling_siglip import SigLIPVisionModel
-from modelling_gemma import GemmaForCausalLM
+import torch
+from modeling_siglip import SiglipVisionModel, SiglipVisionConfig
+from modelling_gemma import PaliGemmaConfig, PaliGemmaForConditionalGeneration, KVCache
 
-# Vision encoder
-vision_model = SigLIPVisionModel(config)
-visual_tokens = vision_model(pixel_values)  # [B, 196, 768]
+# Vision encoder: 224x224 image -> 196 visual tokens of 768 dims
+vision = SiglipVisionModel(SiglipVisionConfig())
+tokens = vision(torch.randn(1, 3, 224, 224))          # [1, 196, 768]
 
-# Project to language space
-projected = projector(visual_tokens)  # [B, 196, 2048]
-
-# Merge with text tokens and generate
-output = gemma_model.generate(merged_input)
+# Full model (random weights; Gemma-2B-sized text config shown in tests/)
+config = PaliGemmaConfig(vision_config={}, text_config={...})
+model = PaliGemmaForConditionalGeneration(config)
+out = model(input_ids=ids, pixel_values=pixels,
+            attention_mask=torch.ones_like(ids), kv_cache=KVCache())
+logits = out["logits"]
 ```
+
+> This is an architecture implementation with randomly initialised weights; it is not trained or benchmarked.
+> To run real inference, load the official PaliGemma checkpoint weights into these modules.
 
 ---
 
