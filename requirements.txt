@@ -2,3 +2,5 @@ torch>=2.1
 numpy
 pillow
 pytest
+cv-benchkit>=0.1.1
+
